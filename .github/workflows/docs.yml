@@ -1,0 +1,35 @@
+name: docs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  consistency:
+    name: documentation consistency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Fails if a PRD section has no traceability row, a matrix row points at a
+      # section that does not exist, a relative link is broken, a B/F/S section
+      # reference does not resolve, a section number is duplicated, or a document
+      # stops linking to its siblings. No third-party dependencies required.
+      - name: Check cross-document consistency
+        run: python3 scripts/check_docs.py
+
+      # Run the script against the merge result, not the PR head, so a branch that
+      # deletes a section and updates the matrix together still passes.
+      - name: Check merge result
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
+          git checkout -B check FETCH_HEAD
+          git merge --no-edit --no-ff "origin/${{ github.event.pull_request.head.sha }}"
+          python3 scripts/check_docs.py

@@ -1,0 +1,41 @@
+# Root-level ignore rules for the monorepo.
+# backend/.gitignore and frontend/.gitignore cover their own trees; this file
+# only handles artifacts that sit at the repo root or are not covered there.
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Caches that can appear at the root (per-project ignores cover backend/ and frontend/)
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+__pycache__/
+*.py[cod]
+
+# Playwright output; frontend/.gitignore does not cover this path
+/frontend/test-results/
+/frontend/playwright-report/
+
+# Local environment files. backend/.gitignore and frontend/.gitignore already
+# ignore their own; these patterns are a belt-and-braces guard against a stray
+# .env landing at the root.
+.env
+.env.*
+!.env.example
+
+# Logs / local scratch
+*.log
+
+# Accidental shell-redirect artifacts. `architecture.py<` is a *directory* that
+# contains a file named `filedir>`; both were created by an unquoted `>`
+# redirect. Files are left on disk — delete them, then drop these rules.
+backend/tests/unit/architecture.py<
+backend/build/
+
+# Duplicate reminders stub: a top-level `reminders/` app that predates and is
+# shadowed by the real `apps/reminders/`. Kept out of history so the dead copy
+# is not mistaken for the live one. Files are left on disk.
+backend/reminders/
+backend/apps/reminders_app/

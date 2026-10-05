@@ -1,0 +1,13 @@
+# Run `pre-commit install` once after cloning. The docs hook keeps
+# prd.md, backend-plan.md, frontend-plan.md and security.md consistent as you
+# edit; CI (.github/workflows/docs.yml) enforces the same check on the merge
+# result, so this is a fast local signal, not the gate.
+repos:
+  - repo: local
+    hooks:
+      - id: docs-consistency
+        name: docs cross-reference consistency
+        entry: python3 scripts/check_docs.py
+        language: system
+        pass_filenames: false
+        files: ^(prd\.md|.*-plan\.md|security\.md|scripts/check_docs\.py)$

@@ -1,0 +1,121 @@
+name: lawyer-backend
+
+x-backend: &backend
+  build:
+    context: .
+    dockerfile: Dockerfile
+  env_file:
+    - .env
+  environment:
+    DJANGO_SETTINGS_MODULE_SHORT: dev
+    DJANGO_DB_HOST: db
+    DJANGO_CACHE_URL: redis://redis:6379/0
+    DJANGO_CELERY_BROKER_URL: redis://redis:6379/1
+    DJANGO_CELERY_RESULT_BACKEND: redis://redis:6379/2
+    DJANGO_CELERY_TASK_ALWAYS_EAGER: "False"
+    DJANGO_EMAIL_BACKEND: django.core.mail.backends.smtp.EmailBackend
+    DJANGO_EMAIL_HOST: mailhog
+    DJANGO_EMAIL_PORT: "1025"
+    # Interpolated, not literal: `environment:` wins over `env_file:`, so a
+    # hardcoded slug here would silently override whatever `.env` says and pin
+    # every request to one practice. Falls back to `demo`, the same slug
+    # scripts/seed_demo.py creates, so `compose up` works before `.env` is
+    # copied. `.env.example` documents what this is and why it is needed.
+    DJANGO_DEFAULT_TENANT_SLUG: ${DJANGO_DEFAULT_TENANT_SLUG:-demo}
+  volumes:
+    - .:/app
+  entrypoint: ["/app/scripts/docker-entrypoint.sh"]
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  restart: unless-stopped
+
+services:
+  api:
+    <<: *backend
+    container_name: lawyer_api
+    command:
+      - sh
+      - -c
+      - >-
+        python manage.py migrate --noinput &&
+        python manage.py collectstatic --noinput &&
+        exec gunicorn config.wsgi:application
+        --bind 0.0.0.0:8000
+        --workers 3
+        --timeout 60
+        --access-logfile - --error-logfile -
+    ports:
+      - "8000:8000"
+
+  worker:
+    <<: *backend
+    container_name: lawyer_worker
+    command: ["celery", "-A", "config", "worker", "--loglevel=info", "--concurrency=2"]
+    healthcheck:
+      test: ["CMD", "celery", "-A", "config", "inspect", "ping", "-d", "celery@$$HOSTNAME"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  beat:
+    <<: *backend
+    container_name: lawyer_beat
+    command:
+      - celery
+      - -A
+      - config
+      - beat
+      - --loglevel=info
+      - --scheduler
+      - django_celery_beat.schedulers:DatabaseScheduler
+
+  db:
+    image: postgres:16-alpine
+    container_name: lawyer_db
+    environment:
+      POSTGRES_DB: ${DJANGO_DB_NAME:-lawyer}
+      POSTGRES_USER: ${DJANGO_DB_USER:-lawyer_app}
+      POSTGRES_PASSWORD: ${DJANGO_DB_PASSWORD:-lawyer_app}
+    command: >
+      postgres -c shared_preload_libraries=pg_stat_statements
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DJANGO_DB_USER:-lawyer_app} -d ${DJANGO_DB_NAME:-lawyer}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: lawyer_redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: lawyer_mailhog
+    ports:
+      - "8025:8025"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
