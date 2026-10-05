@@ -1,0 +1,59 @@
+Copyright (c) 2026 Devender Birwal. All rights reserved.
+
+This repository and its entire contents are proprietary. No open-source license
+is granted.
+
+NO PERMISSION GRANTED
+
+Except as required by GitHub's Terms of Service for interacting with public
+repositories on GitHub itself, no permission is granted to use, copy, modify,
+merge, publish, distribute, sublicense, sell, or create derivative works of this
+software or its contents, in whole or in part.
+
+Viewing this repository and forking it on GitHub is permitted solely as
+contemplated by GitHub's Terms of Service. Such permission does not extend to
+any other use of the forked copy, including running, hosting, deploying, or
+redistributing it.
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+AUTHORIZED USE
+
+Use by the copyright holder, and by any party the copyright holder authorizes
+in writing, is permitted. No authorization is granted by implication.
+
+THIRD-PARTY COMPONENTS
+
+This repository depends on third-party open-source packages, each governed by
+its own license. Those licenses apply to those packages only and are unaffected
+by this notice. Review the dependency manifests (`backend/pyproject.toml`,
+`frontend/package.json`) and each project's lockfile to determine the exact
+terms. Nothing here grants rights to third-party code beyond what its own
+license provides, and nothing here restricts rights to it that its license
+grants.
+
+THIRD-PARTY MATERIAL
+
+Documentation, plans, checklists, and configuration in this repository are
+included in the proprietary notice above.
+
+NO WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. THE COPYRIGHT HOLDER IS
+NOT LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM, OUT OF, OR
+IN CONNECTION WITH THE SOFTWARE OR ITS USE.
+
+TRADEMARKS
+
+No trademark or branding rights are granted. The names of any products,
+services, or organizations referenced in this repository are the property of
+their respective owners.
+
+---
+
+This notice records the copyright holder's reservation of rights; it is not a
+grant of permission and it is not legal advice. To grant usage rights to a
+third party, the copyright holder must do so explicitly in writing.
