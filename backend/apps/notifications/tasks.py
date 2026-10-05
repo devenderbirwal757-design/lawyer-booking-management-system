@@ -24,7 +24,9 @@ logger = logging.getLogger(__name__)
 )
 def send_notification_task(self: Any, notification_id: str) -> str:
     try:
-        notification = Notification.objects.select_related("template").get(pk=notification_id)
+        notification = (
+            Notification.objects.unfiltered().select_related("template").get(pk=notification_id)
+        )
     except Notification.DoesNotExist:
         logger.warning("notification.task_missing %s", notification_id)
         return "missing"

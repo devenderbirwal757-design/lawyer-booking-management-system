@@ -49,7 +49,7 @@ class NotificationTemplate(BaseModel):
 
     class Meta:
         db_table = "notifications_notificationtemplate"
-        constraints = [
+        constraints = [  # noqa: RUF012 - Django's own class-list style
             models.UniqueConstraint(
                 fields=("tenant", "event", "channel"),
                 name="uniq_notificationtemplate_tenant_event_channel",

@@ -22,7 +22,10 @@ from common.mixins import TenantFilterMixin
 
 
 class AdminReportViewSet(TenantFilterMixin, ViewSet):
-    permission_classes = [permissions.IsAuthenticated]  # Will be refined by AdminScoped if needed
+    # TODO(Phase 9): this is `IsAuthenticated`, not `IsAdmin`, so any authenticated
+    # customer JWT can read revenue figures. Original note: "Will be refined by
+    # AdminScoped if needed." Not tightened here because it needs an authz decision.
+    permission_classes = [permissions.IsAuthenticated]  # noqa: RUF012 - DRF's own class-list style
     tenant_field = "tenant_id"
 
     def get_tenant(self) -> Any:

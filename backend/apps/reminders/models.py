@@ -45,13 +45,13 @@ class Reminder(BaseModel):
 
     class Meta:
         db_table = "reminders_reminder"
-        constraints = [
+        constraints = [  # noqa: RUF012 - Django's own class-list style
             models.UniqueConstraint(
                 fields=("appointment", "kind"),
                 name="uniq_reminder_appointment_kind",
             )
         ]
-        indexes = [
+        indexes = [  # noqa: RUF012 - Django's own class-list style
             models.Index(
                 fields=("tenant_id", "status", "scheduled_for"),
                 name="idx_reminders_t_stat_sched",

@@ -596,24 +596,57 @@ Each phase is gated by the tests in [`security.md`](./security.md) listed in §1
 - [x] Tests: valid signature → confirmed; invalid signature → 400; replayed webhook → single transition; forged client "paid" call has no effect; illegal transitions rejected; hold expiry → `EXPIRED` not `FAILED`; refund requires settle, and settle cannot precede refund creation
 
 ### Phase 7 — Notifications
-- [ ] `NotificationTemplate` model + seed data migration
-- [ ] `NotificationService` + `EmailChannel` (SMTP/SES), `SmsChannel`/`WhatsAppChannel` stubs
-- [ ] `Notification` model, `send_notification` task with retries
-- [ ] Triggers via `transaction.on_commit`: booking confirmed, payment success, cancelled, rescheduled
-- [ ] Tests: template renders correct placeholders; send failure retried then marked failed; no send on rolled-back transaction
+- [ ] `NotificationTemplate` model + seed data migration — model exists, but there is **no seed
+  migration and `scripts/seed_demo.py` creates none**, so a fresh tenant has no templates and every
+  notification renders empty. The rendering and delivery code is inert until templates exist.
+- [x] `NotificationService` + `EmailChannel` (SMTP/SES), `SmsChannel`/`WhatsAppChannel` stubs —
+  delivered over Django's configured `EMAIL_BACKEND` (SMTP/SES by configuration; there is no
+  SES-specific code). SMS and WhatsApp are stubs that log and report success.
+- [x] `Notification` model, `send_notification` task with retries
+- [ ] Triggers via `transaction.on_commit`: booking confirmed, payment success, cancelled,
+  rescheduled — **not wired.** `create_notification` / `enqueue_notification` are called from
+  exactly one place, `apps/reminders/tasks.py`; `apps/appointments/` and `apps/payments/` contain
+  no reference to notifications at all. `enqueue_notification` itself is correct and tested, but
+  nothing on the booking or payment lifecycle calls it, so no customer is ever notified.
+- [x] Tests: template renders correct placeholders; send failure retried then marked failed; no send
+  on rolled-back transaction — 32 tests in `tests/unit/test_notifications.py` (26) and
+  `tests/integration/test_notification_dispatch.py` (6). Both files were mutation-checked: removing
+  `transaction.on_commit` fails the three rollback tests, and failing on the first attempt fails
+  the three retry tests. Writing them surfaced a production bug — `send_notification_task` read
+  through the tenant-scoped manager, so it raised `TenantContextMissing` in a worker where no
+  request context exists; fixed to use `unfiltered()`, which the manager documents as the Celery
+  escape hatch.
 
 ### Phase 8 — Reminders
-- [ ] `Reminder` model with `UNIQUE(appointment, kind)`
-- [ ] Created on confirmation using tenant-configured offsets
-- [ ] `dispatch_due_reminders` beat task (5 min) with `skip_locked` claiming
+- [ ] `Reminder` model with `UNIQUE(appointment, kind)` — model and constraint exist, untested
+- [ ] Created on confirmation using tenant-configured offsets — untested; no caller outside
+  `apps/reminders/` invokes it
+- [ ] `dispatch_due_reminders` beat task (5 min) with `skip_locked` claiming — the task exists and
+  uses `select_for_update(skip_locked=True)`, but **`CELERY_BEAT_SCHEDULE` has no entry for it**
+  (only `expire-appointment-holds` and `reconcile-pending-payments`), so the sweep never fires. Same
+  bug class as the hold sweep, which *is* guarded by
+  `test_beat_schedules_the_hold_sweep`; the reminder equivalent does not exist yet. The task also
+  reads `Reminder.objects` without tenant context at four sites, which raises
+  `TenantContextMissing` in a worker — the identical defect fixed in Phase 7.
 - [ ] Tests: due reminder sent once; two workers don't duplicate; reschedule re-creates reminders for the new appointment
 
 ### Phase 9 — Reports
-- [ ] `/admin/reports/dashboard` — today count, upcoming count, customer count, revenue (today/month)
-- [ ] `/admin/reports/appointments` — totals by status with date-range filters
-- [ ] `/admin/reports/revenue` — collected / pending / refunded
-- [ ] Aggregation via ORM `annotate`/`Count`/`Sum` on indexed columns, tenant-scoped
-- [ ] Tests: figures match seeded fixtures; empty ranges return zeros, not errors
+- [ ] `/admin/reports/dashboard` — today count, upcoming count, customer count, revenue
+  (today/month) — view method written, **not reachable** (see routing note below)
+- [ ] `/admin/reports/appointments` — totals by status with date-range filters — view method
+  written, not reachable
+- [ ] `/admin/reports/revenue` — collected / pending / refunded — view method written, not reachable
+- [x] Aggregation via ORM `annotate`/`Count`/`Sum` on indexed columns, tenant-scoped — reads are
+  tenant-filtered via `TenantFilterMixin`; not exercised by any test
+- [ ] **Routing gap:** `apps/reports/urls.py` declares the three paths but is **not included in
+  `config/urls.py`**, so `/admin/reports/*` returns 404. The URLs are dead until the include lands.
+- [ ] Tests: figures match seeded fixtures; empty ranges return zeros, not errors — none exist;
+  `apps/reports/tests/` is empty
+- [ ] **Authorization gap:** `AdminReportViewSet.permission_classes` is `[IsAuthenticated]`, not
+  `[IsAdmin]`. Tenant scoping limits a request to one tenant's figures, but any authenticated
+  *customer* holding a JWT could read the admin revenue endpoints once routed. The original code
+  carried the note "Will be refined by AdminScoped if needed"; that decision is still outstanding
+  and must be settled in the same change that adds the routing include.
 
 ### Phase 10 — Hardening & deploy
 - [x] Throttle scopes wired; DRF exception handler returns consistent error shape
